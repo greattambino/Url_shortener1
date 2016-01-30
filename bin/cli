@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+  user_input = ""
+  puts "Welcome to the magnificent url_shortener CLI. Please enter your email address."
+  puts "Oh, also, you can type \"exit\" to exit."
+
+  require 'launchy'
+  def valid_email?(email)
+    email =~ /.+@.+\..+/ #naive
+  end
+  #lol law of demeter.
+  class BadDataError < StandardError; end
+
+  email = gets.chomp until valid_email?(email)
+
+  user = User.create!(email: email)
+  until user_input == "exit"
+    begin
+      puts "What do you want to do?"
+      puts "0 for Create Shortened URL"
+      puts "1 for Visit Shortened URL"
+      print "Enter selection:  "
+      user_input = gets.chomp
+      case user_input
+      when "0"
+        print "Type in your long url:  "
+        long_url = gets.chomp
+        shortened_url = ShortenedUrl.create_for_user_and_long_url!(user, long_url)
+        puts "Your shortened url is ( #{shortened_url.short_url} )"
+      when "1"
+        print "Type in your short url:  "
+        short_url = gets.chomp
+        shortened_url = ShortenedUrl.find_by_short_url(short_url)
+        if shortened_url
+          Launchy::Browser.run(shortened_url.long_url)
+          Visit.record_visit!(user, shortened_url)
+          puts "should have gone there?"
+          #go there.
+        else
+          puts "That is an invalid short url. Try again, tomorrow."
+        end
+      else
+        raise BadDataError
+      end
+    rescue BadDataError
+      puts "Please enter a valid selection."
+      retry
+    end
+  end
